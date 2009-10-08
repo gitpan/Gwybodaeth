@@ -17,7 +17,7 @@ Write::Write - Main class for applying maps to data.
 
 =head1 DESCRIPTION
 
-This class is intended to be subclassed thus has no public methods.
+This class is intended to be subclassed thus has no public methods bar new().
 
 =over
 =cut
@@ -31,7 +31,7 @@ binmode( STDERR, ':utf8' );
 
 =item new()
 
-Returns an instance of WriteFromXML;
+Returns an instance of whichever class has subclassed Gwybodaeth::Write.;
 
 =cut
  
@@ -41,6 +41,37 @@ sub new {
     $self->{XML} = XML::Twig->new(pretty_print => 'nice');
     bless $self, $class;
     return $self;
+}
+
+# Check cleanliness of input data 
+sub _check_data {
+    my $self        = shift;
+    my $triple_data = shift;
+    my $data        = shift;
+    my $data_type   = shift;      # data type of $data;
+    
+    # Check $triple_data is the correct data type.
+    unless (ref($triple_data) eq 'ARRAY') { 
+        croak "expected array ref as first argument";
+    }
+
+    my $triples = ${ $triple_data }[0];
+    my $functions = ${ $triple_data }[1]; 
+
+    # Check that both array elements are the correct data types in 
+    # $triple_data.
+    unless (eval{ $triples->isa('Gwybodaeth::Triples') }) {
+        croak 'expected a Gwybodaeth::Triples object as first argument of array';
+    }
+    unless (ref($functions) eq 'HASH') {
+        croak 'expected a hash ref as second argument of array';
+    }
+    
+    # Check $data is in the correct data type.
+    unless (ref($data) eq $data_type) {
+        croak "expected $data_type in the second array ref";
+    }
+    return 1;
 }
 
 sub _print2str {
@@ -440,7 +471,7 @@ Iestyn Pryce, <imp25@cam.ac.uk>
 
 =head1 ACKNOWLEDGEMENTS
 
-I'd like to thank the Ensemble project (www.ensemble.ac.uk) for funding me to work on this project in the summer of 2009.
+I'd like to thank the Ensemble project (L<www.ensemble.ac.uk>) for funding me to work on this project in the summer of 2009.
 
 =head1 COPYRIGHT AND LICENSE
 

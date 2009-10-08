@@ -55,37 +55,48 @@ sub write_rdf {
     my $triple_data = shift;
     my $data = shift;
 
+    # Check cleanliness of input data types 
+    $self->_check_data($triple_data,$data,'ARRAY');
+
     my $triples = ${ $triple_data }[0];
     my $functions = ${ $triple_data }[1]; 
 
-    # This loop makes sure that we give the data
-    # interpreter only the data we want and not 
-    # any metadata.
     my @pure_data;
+    my($start,$end);
+
+    $start = 1;
+    $end   = $#{ $data };
+
+    # Record any start end end point we are given.
+    # This allows the interpreter to skip unwanted rows.
     for my $row (0..$#{ $data }) {
         if (@{$data}[$row]->[0] =~ m/start\s+row/mix) {
-            my $start = int @{$data}[$row]->[1];
-            for ($start..$#{ $data }) {
-                push @pure_data, @{ $data }[$_];
-            }
+            $start = int @{$data}[$row]->[1] - 1;       # Subtract 1 because
+                                                        # arrays start at 0.
+        }
+        if (@{ $data }[$row]->[0] =~ m/end\s+row/mix) {
+            $end = int @{ $data }[$row]->[1] - 1;       # Subtract 1 because
+                                                        # arrays start at 0.
             last;
         }
     }       
 
-    if (!@pure_data) { # Always make sure the first line is skipped
-        for (1..$#{ $data }) {
-            push @pure_data, @{ $data }[$_];
-        }
-    } 
+    for ($start..$end) {
+        push @pure_data, @{ $data }[$_];
+    }
 
     $self->_write_meta_data();
 
     for my $row (@pure_data) {
-        #$self->_write_triples($row, $triple_data);
         $self->_really_write_triples($row,$triples);
     }
+
     my %ids;
-    for my $key (reverse keys %{ $functions }) {
+
+    # The %functions hash is tied to InsertOrderHash so the keys will be
+    # given in the order they entered the hash. This gives the correct
+    # precedence ordering. 
+    for my $key ( keys %{ $functions }) {
         for my $row (@pure_data) {
             my $id = $self->_extract_field($row,$key);
             next if (exists $ids{$id});
@@ -121,7 +132,7 @@ Iestyn Pryce, <imp25@cam.ac.uk>
 
 =head1 ACKNOWLEDGEMENTS
 
-I'd like to thank the Ensemble project (www.ensemble.ac.uk) for funding me to work on this project in the summer of 2009.
+I'd like to thank the Ensemble project (L<www.ensemble.ac.uk>) for funding me to work on this project in the summer of 2009.
 
 =head1 COPYRIGHT AND LICENSE
 

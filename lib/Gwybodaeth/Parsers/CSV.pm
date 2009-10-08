@@ -66,7 +66,8 @@ sub parse {
             my @fields = $csv->fields();
             $rows[$i++] = \@fields;
         } else {
-            croak "unable to parse row: " . $csv->error_input;
+            croak "unable to parse row: " . $csv->error_input . "\n".
+                  "Are you sure this is CSV data?";
         }
     }
 
@@ -83,7 +84,7 @@ Iestyn Pryce, <imp25@cam.ac.uk>
 
 =head1 ACKNOWLEDGEMENTS
 
-I'd like to thank the Ensemble project (www.ensemble.ac.uk) for funding me to work on this project in the summer of 2009.
+I'd like to thank the Ensemble project (L<www.ensemble.ac.uk>) for funding me to work on this project in the summer of 2009.
 
 =head1 COPYRIGHT AND LICENSE
 

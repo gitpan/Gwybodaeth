@@ -7,6 +7,7 @@ use lib '../../lib';
 
 use Test::More qw{no_plan};
 use Test::Output;
+use Test::Exception;
 
 use Gwybodaeth::Parsers::CSV;
 use Gwybodaeth::Parsers::N3;
@@ -30,7 +31,7 @@ my @map;
           '         foaf:addy "Ex:$1"',
           '     ] .' );
 
-my $str = <<'EOF'
+my $str = <<'EOF';
 <?xml version="1.0"?>
 <rdf:RDF>
 <foaf:Person>
@@ -42,7 +43,6 @@ my $str = <<'EOF'
 </foaf:Person>
 </rdf:RDF>
 EOF
-;
 
 sub write_test_1 {
     return $csv_write->write_rdf($map_parse->parse(@map), 
@@ -59,7 +59,7 @@ stdout_is(\&write_test_1, $str, 'nested function' );
 @map = ( "[] a <Ex:foo+\@If(\$2='male';'Man';'Woman')> ;",
          'foaf:name "Ex:$1" .' );
 
-$str = <<'EOF'
+$str = <<'EOF';
 <?xml version="1.0"?>
 <rdf:RDF>
 <foo:Man>
@@ -70,7 +70,6 @@ $str = <<'EOF'
 </foo:Woman>
 </rdf:RDF>
 EOF
-;
 
 $csv_write = $map_parse = $csv_parse = undef;
 $csv_write = Gwybodaeth::Write::WriteFromCSV->new();
@@ -94,7 +93,7 @@ stdout_is(\&write_test_2, $str, '@If grammar');
           'foo:id "Ex:$2^^int" .',
        );
 
-$str = <<'EOF'
+$str = <<'EOF';
 <?xml version="1.0"?>
 <rdf:RDF>
 <foaf:Person>
@@ -103,7 +102,6 @@ $str = <<'EOF'
 </foaf:Person>
 </rdf:RDF>
 EOF
-;
 
 $csv_write = $map_parse = $csv_parse = undef;
 $csv_write = Gwybodaeth::Write::WriteFromCSV->new();
@@ -126,7 +124,7 @@ stdout_is(\&write_test_3, $str, '^^ grammar');
           'foo:capital "Ex:$2@cy" .',
         );
 
-$str = <<'EOF'
+$str = <<'EOF';
 <?xml version="1.0"?>
 <rdf:RDF>
 <foo:country>
@@ -135,7 +133,6 @@ $str = <<'EOF'
 </foo:country>
 </rdf:RDF>
 EOF
-;
 
 $csv_write = $map_parse = $csv_parse = undef;
 $csv_write = Gwybodaeth::Write::WriteFromCSV->new();
@@ -148,3 +145,92 @@ sub write_test_4 {
 }
 
 stdout_is(\&write_test_4, $str, '@lang grammar');
+
+
+# Test 'start row' and 'end row' functionality
+@data = ('some,cruft','start row, 5', 'end row, 6','name,sex', 
+         'John,male', 'Sarah,female', 'some,end,cruft',);
+
+@map = ( "[] a foo:Person ;",
+         'foaf:name "Ex:$1" .' );
+
+$str = <<'EOF';
+<?xml version="1.0"?>
+<rdf:RDF>
+<foo:Person>
+<foaf:name>John</foaf:name>
+</foo:Person>
+<foo:Person>
+<foaf:name>Sarah</foaf:name>
+</foo:Person>
+</rdf:RDF>
+EOF
+
+$csv_write = $map_parse = $csv_parse = undef;
+$csv_write = Gwybodaeth::Write::WriteFromCSV->new();
+$map_parse = Gwybodaeth::Parsers::N3->new();
+$csv_parse = Gwybodaeth::Parsers::CSV->new();
+
+
+sub write_test_5 {
+    return $csv_write->write_rdf($map_parse->parse(@map), 
+                                 $csv_parse->parse(@data));
+}
+
+stdout_is(\&write_test_5, $str, '[start|end] row');
+
+# Test crufty input
+
+$csv_write = $map_parse = $csv_parse = undef;
+$csv_write = Gwybodaeth::Write::WriteFromCSV->new();
+$csv_parse = Gwybodaeth::Parsers::CSV->new();
+
+my $xml_block = <<'EOF';
+<?xml version="1.0"?>
+<rdf:RDF>
+<foaf:Person>
+<foaf:name>Plato</foaf:name>
+</foaf:Person>
+</rdf:RDF>
+EOF
+
+my @xml_array = split /\n/, $xml_block;
+
+ok(sub { $csv_write->write_rdf($map_parse->parse(@map),
+                                   $csv_parse->parse(@xml_array)); },
+       'cruft test 1 (XML)' );
+
+# Test for passing incorrect data structures to write_rdf
+$csv_write = undef;
+$csv_write = Gwybodaeth::Write::WriteFromCSV->new();
+
+# Pass two strings, not two array refs;
+my($string1,$string2) = (0,0);
+
+throws_ok {$csv_write->write_rdf($string1, $string2)} 
+        qr/expected array ref as first argument/, 
+        'scalar input (write_rdf args)';
+
+# Set the first array ref as two scalars, not references to
+# Gwybodaeth::Triple and a HASH.
+my $array_ref1 = [0,0];
+
+throws_ok {$csv_write->write_rdf($array_ref1, $string2)}
+        qr/expected a Gwybodaeth::Triples object as first argument of array/,
+        'dud array input 1 (write_rdf 1st arg)';
+
+# Set the first array ref to a Gwybodaeth::Triples (correct)
+# and a scalar (incorrect).
+my$array_ref2 = [Gwybodaeth::Triples->new(),0];
+
+throws_ok {$csv_write->write_rdf($array_ref2, $string2)}
+        qr/expected a hash ref as second argument of array/,
+        'dud array intput 2 (write_rdf 1st arg)';
+
+# Set the first array ref correctly and the second to a scalar.
+
+my $array_ref3 = [Gwybodaeth::Triples->new(),{}];
+
+throws_ok {$csv_write->write_rdf($array_ref3, $string2)}
+        qr/expected ARRAY in the second array ref/,
+        'dud array input 3 (write_rdf 2nd arg)';

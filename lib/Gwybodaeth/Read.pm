@@ -60,10 +60,16 @@ sub get_file_data {
     ref(my $self = shift) or croak "instance variable needed";
     my $file = shift;
 
-    # Return if file doesn't exist
-    unless ( -e $file ) { return 0 };
+    my $fh;    
 
-    open my $fh, q{<}, $file or croak "Couldn't open $file: $!";
+    if (fileno($file)) { # Check if its a file handle
+        $fh = $file;
+    } else {             # If it's just a file name open a file handle
+        # Return if file doesn't exist
+        unless ( -e $file ) { return 0 };
+
+        open $fh, q{<}, $file or croak "Couldn't open $file: $!";
+    }
 
     @{ $self->{Data} }= (<$fh>);
 
@@ -123,7 +129,7 @@ Iestyn Pryce, <imp25@cam.ac.uk>
 
 =head1 ACKNOWLEDGEMENTS
 
-I'd like to thank the Ensemble project (www.ensemble.ac.uk) for funding me to work on this project in the summer of 2009.
+I'd like to thank the Ensemble project (L<www.ensemble.ac.uk>) for funding me to work on this project in the summer of 2009.
 
 =head1 COPYRIGHT AND LICENSE
 

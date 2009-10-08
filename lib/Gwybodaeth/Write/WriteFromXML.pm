@@ -54,6 +54,8 @@ sub write_rdf {
     my $triple_data = shift;
     my $data = shift;
 
+    $self->_check_data($triple_data,$data,'XML::Twig');
+
     my $triples = $triple_data->[0]; 
     my $functions = $triple_data->[1];
 
@@ -178,7 +180,7 @@ Iestyn Pryce, <imp25@cam.ac.uk>
 
 =head1 ACKNOWLEDGEMENTS
 
-I'd like to thank the Ensemble project (www.ensemble.ac.uk) for funding me to work on this project in the summer of 2009.
+I'd like to thank the Ensemble project (L<www.ensemble.ac.uk>) for funding me to work on this project in the summer of 2009.
 
 =head1 COPYRIGHT AND LICENSE
 
